@@ -10,8 +10,6 @@ import cv2
 
 # tensorflow & keras
 import tensorflow as tf
-from tensorflow.keras.applications.imagenet_utils import preprocess_input, decode_predictions
-from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 
 # Flask utils
@@ -23,22 +21,31 @@ from gevent.pywsgi import WSGIServer
 app = Flask(__name__)
 
 # Model saved with Keras model.save()
-MODEL_PATH = 'model/ckpt1000'
+MODEL_PATH = 'model/model_1000.tflite'
+
 # Load your trained model
-model = load_model(MODEL_PATH)
+interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_detils = interpreter.get_output_details()
+print('Model loaded. Check http://127.0.0.1:5000/')
+
+
+
 img_size = (299,299)
 id_to_class = {0: 'Airplane',
 				 1: 'Candle',
-				 2: 'Christmas_Tree',
+				 2: 'Christmas Tree',
 				 3: 'Jacket',
 				 4: 'Miscellaneous',
 				 5: 'Snowman'}
 
-print('Model loaded. Check http://127.0.0.1:5000/')
 
 
-def model_predict(img_path, model):
+def model_predict(img_path):
 	try:
+		#print("predict called")
+
 		img = image.load_img(img_path, target_size=img_size)
 		img = image.img_to_array(img)
 
@@ -50,7 +57,13 @@ def model_predict(img_path, model):
 			img = img[:,:,:3]
 
 		img = img/255.
-		pred = model.predict(tf.reshape(img,(1,img.shape[0],img.shape[1],img.shape[2])))
+		#pred = model.predict(tf.reshape(img,(1,img.shape[0],img.shape[1],img.shape[2])))
+
+
+		interpreter.set_tensor(input_details[0]['index'], np.expand_dims(img, axis=0))
+		interpreter.invoke()
+		pred =  interpreter.get_tensor(output_detils[0]['index'])
+
 		lable = id_to_class[pred[0].argmax()]
 		return lable
 
@@ -67,6 +80,7 @@ def index():
 
 @app.route('/predict', methods=['GET', 'POST'])
 def upload():
+    #print("upload called")
     if request.method == 'POST':
         # Get the file from post request
         f = request.files['file']
@@ -78,7 +92,7 @@ def upload():
         f.save(file_path)
 
         # Make prediction
-        result = model_predict(file_path, model)
+        result = model_predict(file_path)
 
         #delete the downloaded file
         os.remove(file_path)
