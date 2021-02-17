@@ -1,6 +1,7 @@
 Flask==1.1.2
 gevent==20.6.2
-opencv_python==4.4.0.42
-tensorflow-cpu==2.4.1
-Werkzeug==1.0.1
+tflite_runtime==2.5.0
 numpy==1.19.5
+Werkzeug==1.0.1
+tensorflow==2.4.1
+opencv_python==4.4.0.42

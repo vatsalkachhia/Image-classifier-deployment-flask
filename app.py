@@ -9,8 +9,9 @@ import cv2
 
 
 # tensorflow & keras
-import tensorflow as tf
-from tensorflow.keras.preprocessing import image
+#import tensorflow as tf
+#from tensorflow.keras.preprocessing import image
+import tflite_runtime.interpreter as tflite
 
 # Flask utils
 from flask import Flask, redirect, url_for, request, render_template
@@ -24,7 +25,7 @@ app = Flask(__name__)
 MODEL_PATH = 'model/model_1000.tflite'
 
 # Load your trained model
-interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
+interpreter = tflite.Interpreter(model_path=MODEL_PATH)
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_detils = interpreter.get_output_details()
@@ -46,8 +47,8 @@ def model_predict(img_path):
 	try:
 		#print("predict called")
 
-		img = image.load_img(img_path, target_size=img_size)
-		img = image.img_to_array(img)
+		img = cv2.imread(img_path,cv2.IMREAD_COLOR)
+		img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
 
 		if len(img.shape)==2:
 			# 1 to 3 chennels
@@ -56,14 +57,14 @@ def model_predict(img_path):
 			#remove the alpha chennel
 			img = img[:,:,:3]
 
+		img = cv2.resize(img, img_size)
+
 		img = img/255.
 		#pred = model.predict(tf.reshape(img,(1,img.shape[0],img.shape[1],img.shape[2])))
 
-
-		interpreter.set_tensor(input_details[0]['index'], np.expand_dims(img, axis=0))
+		interpreter.set_tensor(input_details[0]['index'], np.expand_dims(img, axis=0).astype(np.float32))
 		interpreter.invoke()
 		pred =  interpreter.get_tensor(output_detils[0]['index'])
-
 		lable = id_to_class[pred[0].argmax()]
 		return lable
 
